@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS 'SOURCE' (
+    'URL' TEXT NOT NULL,
+    'LAST_FETCH' TEXT NOT NULL
+);
+
+INSERT INTO 'SOURCE' VALUES ('https://example.com', 'N/A');

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>tvappfetcher - codingap</title>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+    <script src="/static/js/index.js"></script>
+</head>
+
+<body>
+    <div class="app card">
+        <header>
+            <div class="brand">
+                <div class="logo">TV</div>
+                <div>
+                    <h1>tvappfetcher</h1>
+                    <div class="muted small">manage m3u sources</div>
+                </div>
+            </div>
+            <div class="userbar" id="userbar" style="display:none">
+                <button class="button button-ghost" id="logout-button">logout</button>
+            </div>
+        </header>
+
+        <main id="main">
+            <!-- Login screen -->
+            <section id="login" class="login-wrap">
+                <form class="card" id="login-form">
+                    <h2 style="margin-top:0">sign in</h2>
+                    <div class="space"></div>
+                    <label for="password-input">password</label>
+                    <input id="password-input" type="password" autocomplete="current-password" required />
+                    <div class="space"></div>
+                    <div class="row">
+                        <button type="submit" class="button button-primary">login</button>
+                        <div class="right error small" id="login-error"></div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Dashboard -->
+            <section id="dashboard" style="display:none">
+                <div class="grid">
+                    <nav class="card">
+                        <ul>
+                            <li><button data-tab="sources" class="active">sources & fetch</button></li>
+                            <li><button data-tab="channels">channels</button></li>
+                            <li><button data-tab="requests">movies & tv</button></li>
+                            <li><button data-tab="jellyfin">status</button></li>
+                        </ul>
+                    </nav>
+
+                    <div>
+                        <div id="tab-sources" class="card tab-panel">
+                            <h3>sources & fetch</h3>
+                            <label for="m3u-url">paste a m3u or m3u8 url</label>
+                            <input id="m3u-url" type="url" placeholder="https://example.com/playlist.m3u8" />
+                            <div class="space"></div>
+                            <div class="row">
+                                <button id="save-url" class="button button-primary">save</button>
+                                <button id="fetch-now" class="button button-ghost">fetch now</button>
+                                <div class="right small muted" id="next-fetch">next fetch: —</div>
+                            </div>
+                            <div class="space"></div>
+                            <div id="source-message" class="small"></div>
+                        </div>
+
+                        <div id="tab-channels" class="card tab-panel" style="display:none">
+                            <h3>channels</h3>
+                            <div class="row">
+                                <div style="flex:1">
+                                    <div class="muted small">available channels</div>
+                                    <div class="list-scroll card" id="available-channels-list" style="margin-top:8px"></div>
+                                </div>
+                            </div>
+                            <div class="space"></div>
+                            <div class="row">
+                                <div style="flex:1">
+                                    <div class="muted small">filtered channels</div>
+                                    <div class="list-scroll card" id="filtered-channels-list" style="margin-top:8px"></div>
+                                </div>
+                                <div style="width:12px"></div>
+                                <div style="width:320px">
+                                    <div class="muted small">filters</div>
+                                    <div class="space"></div>
+                                    <div id="filtersArea" class="card" style="padding:10px"></div>
+                                    <div class="space"></div>
+                                    <div class="row">
+                                        <input id="newFilter" placeholder="e.g. US, UK, Peacock" />
+                                        <button id="addFilter" class="btn btn-primary">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-requests" class="card tab-panel" style="display:none">
+                            <h3>Movie & TV Requests</h3>
+                            <p class="muted small">Request items from the database to be created for Jellyfin.</p>
+                            <div class="space"></div>
+                            <div class="row">
+                                <select id="mediaType">
+                                    <option value="movie">Movie</option>
+                                    <option value="tv">TV Show</option>
+                                </select>
+                                <input id="searchMedia" class="search" placeholder="Search movie or show" />
+                                <button id="requestBtn" class="btn btn-primary">Request</button>
+                            </div>
+
+                            <div class="space"></div>
+                            <div class="muted small">Available items</div>
+                            <div class="list-scroll card" id="mediaList" style="margin-top:8px"></div>
+
+                            <div class="space"></div>
+                            <div class="muted small">Active in Jellyfin</div>
+                            <div class="list-scroll card" id="jellyfinActive" style="margin-top:8px"></div>
+                        </div>
+
+                        <div id="tab-jellyfin" class="card tab-panel" style="display:none">
+                            <h3>Jellyfin Output</h3>
+                            <p class="muted small">Shows current status of files created and last sync.</p>
+                            <div class="space"></div>
+                            <div id="jellyfinStatus" class="muted small">—</div>
+                            <div class="space"></div>
+                            <button id="refreshJellyfin" class="btn btn-primary">Refresh Status</button>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        <footer>tvappfetcher • copyright 2025</footer>
+    </div>
+</body>
+
+</html>
