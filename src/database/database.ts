@@ -11,6 +11,7 @@
 
 import { Database } from '@db/sqlite';
 import { existsSync } from '@std/fs';
+import { M3UItem } from "../types.ts";
 
 /**
  * global database reference (essentially a singleton)
@@ -52,15 +53,18 @@ const getDatabase = (): Database => {
  * @param file path to the sql file
  * @param args all arguments needed for sql
  */
-const executeSqlFile = (file: string, args?: { [key: string]: string }) => {
+const executeSqlFile = (file: string, args?: { [key: string]: string }): number => {
     const database = getDatabase(); 
 
     // cache the query to prevent file i/o from being taken up
     if (queryCache[file] === undefined) queryCache[file] = Deno.readTextFileSync(file);
     const sqlFile = queryCache[file];
 
-    if (args === undefined) database.exec(sqlFile);
-    else database.exec(sqlFile, args);
+    let affected: number;
+    if (args === undefined) affected = database.exec(sqlFile);
+    else affected = database.exec(sqlFile, args);
+
+    return affected;
 };
 
 /**
@@ -101,6 +105,19 @@ const getM3ULink = (): string => {
     return response['URL'];
 };
 
+/**
+ * checks if channel exists already, if so updates, if not creates
+ */
+const upsertChannel = (item: M3UItem) => {
+    const affected = executeSqlFile('./src/database/sql/update-channel.sql', { ...item });
+
+    // if no items were affected, add entry to database
+    if (affected === 0) {
+        executeSqlFile('./src/database/sql/insert-channel.sql', { ...item });
+    }
+}
+
 export {
-    updateM3ULink, getM3ULink
+    updateM3ULink, getM3ULink,
+    upsertChannel
 };

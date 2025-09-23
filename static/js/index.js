@@ -45,14 +45,15 @@ self.addEventListener('load', () => {
         document.getElementById('login').style.display = 'none';
         document.getElementById('dashboard').style.display = '';
         userbar.style.display = 'flex';
-        loadURLandNextFetch();
+        loadSourcesTab();
+        loadStatusTab();
         // loadChannels(); loadFilters(); loadMediaList(); loadJellyfinActive(); loadJellyfinStatus();
     };
 
     /**
      * loads the url and timestamp of the next automatic fetch
      */
-    const loadURLandNextFetch = async () => {
+    const loadSourcesTab = async () => {
         try {
             const urlRequest = await sendRequest('/api/m3u');
             const nextFetchRequest = await sendRequest('/api/next-fetch');
@@ -62,6 +63,19 @@ self.addEventListener('load', () => {
         } catch (err) {
             console.log(err);
             document.getElementById('next-fetch').textContent = 'next fetch: —';
+        }
+    }
+
+    /**
+     * loads the app status
+     */
+    const loadStatusTab = async () => {
+        try {
+            const response = await sendRequest('/api/status');
+            document.getElementById('app-status').textContent = response.status || '—';
+        } catch (err) {
+            console.log(err);
+            document.getElementById('app-status').textContent = 'failed to load status!';
         }
     }
 
@@ -128,7 +142,7 @@ self.addEventListener('load', () => {
             const response = await sendRequest('/api/m3u', { method: 'POST', json: { url } });
             sourceMessage.textContent = response.message;
             sourceMessage.classList.add('success');
-            loadURLandNextFetch(); 
+            loadSourcesTab(); 
             // loadChannels();
         } catch (err) {
             console.error(err);
@@ -142,13 +156,19 @@ self.addEventListener('load', () => {
         try {
             const response = await sendRequest('/api/m3u/fetch', { method: 'POST' });
             sourceMessage.textContent = response.message;
-            loadURLandNextFetch();
+            loadSourcesTab();
             // loadChannels();
         } catch (err) {
             console.error(err);
             sourceMessage.textContent = err.body.message;
         }
     });
+
+    // ~~ app status ~~
+    document.getElementById('refresh-status').addEventListener('click', loadStatusTab);
+
+    // show errors from non-JSON responses
+    self.addEventListener('unhandledrejection', e => { console.error(e); });
 });
 
 // --- Channels & filters ---
@@ -235,22 +255,3 @@ function renderMedia(list) {
     });
     mediaList.appendChild(ul);
 }
-
-async function loadJellyfinActive() {
-    jellyfinActive.innerHTML = '<div class="muted small">Loading…</div>';
-    try {
-        const list = await api('/api/jellyfin/active'); if (!list.length) { jellyfinActive.innerHTML = '<div class="muted small">No active items.</div>'; return };
-        jellyfinActive.innerHTML = ''; list.forEach(i => { const d = document.createElement('div'); d.className = 'card small'; d.style.marginBottom = '8px'; d.innerHTML = `<strong>${escapeHtml(i.title)}</strong><div class="muted small">${escapeHtml(i.path)}</div>`; jellyfinActive.appendChild(d); });
-    }
-    catch (e) { jellyfinActive.innerHTML = '<div class="muted small">Failed to load.</div>' }
-}
-
-// --- Jellyfin status ---
-async function loadJellyfinStatus() {
-    try { const s = await api('/api/jellyfin/status'); document.getElementById('jellyfinStatus').textContent = s.status || '—'; }
-    catch (e) { document.getElementById('jellyfinStatus').textContent = 'Failed to load'; }
-}
-document.getElementById('refreshJellyfin').addEventListener('click', loadJellyfinStatus);
-
-// show errors from non-JSON responses
-self.addEventListener('unhandledrejection', e => { console.error(e); });

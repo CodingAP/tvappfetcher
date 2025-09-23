@@ -5,7 +5,7 @@ import { setCookie } from '@std/http/cookie';
 import { getLogger } from './logger.ts';
 import { crypto } from '@std/crypto';
 import { encodeHex } from '@std/encoding/hex';
-import { getParser } from "./m3u-parser.ts";
+import { getParser } from './m3u-parser.ts';
 
 const logger = getLogger();
 const parser = getParser();
@@ -61,11 +61,11 @@ const routes: Route[] = [
                     return new Response(JSON.stringify({ message: 'missing the url!', error: true }), { status: 401, headers: defaultHeaders });
                 }
 
-                // TODO: check for valid m3u file here
                 parser.updateURL(body.url);
 
+                // show that url was successfully accepted
                 logger.info('POST /api/m3u - successfully updated m3u link!');
-                return new Response(JSON.stringify({ message: 'successfully updated m3u link!', error: false }), { status: 200, headers: defaultHeaders });
+                return new Response(JSON.stringify({ message: 'successfully updated m3u link!', error: false }), { status: 202, headers: defaultHeaders });
             }
 
             logger.warn('POST /api/m3u - failed to update m3u link!');
@@ -77,6 +77,14 @@ const routes: Route[] = [
         pattern: new URLPattern({ pathname: '/api/next-fetch' }),
         handler: () => {
             return new Response(JSON.stringify({ time: parser.nextFetch.toLocaleString() }), { status: 200, headers: defaultHeaders });
+        }
+    },
+    {
+        method: ['GET'],
+        pattern: new URLPattern({ pathname: '/api/status' }),
+        handler: () => {
+            logger.info(`GET /api/status - ${parser.status}`);
+            return new Response(JSON.stringify({ status: parser.status }), { status: 200, headers: defaultHeaders });
         }
     },
 ];

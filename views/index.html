@@ -27,7 +27,7 @@
 
         <main id="main">
             <!-- Login screen -->
-            <section id="login" class="login-wrap">
+            <section id="login" class="main-card">
                 <form class="card" id="login-form">
                     <h2 style="margin-top:0">sign in</h2>
                     <div class="space"></div>
@@ -60,8 +60,10 @@
                             <input id="m3u-url" type="url" placeholder="https://example.com/playlist.m3u8" />
                             <div class="space"></div>
                             <div class="row">
-                                <button id="save-url" class="button button-primary">save</button>
-                                <button id="fetch-now" class="button button-ghost">fetch now</button>
+                                <div>
+                                    <button id="save-url" class="button button-primary">save</button>
+                                    <button id="fetch-now" class="button button-ghost">fetch now</button>
+                                </div>
                                 <div class="right small muted" id="next-fetch">next fetch: —</div>
                             </div>
                             <div class="space"></div>
@@ -119,12 +121,11 @@
                         </div>
 
                         <div id="tab-jellyfin" class="card tab-panel" style="display:none">
-                            <h3>Jellyfin Output</h3>
-                            <p class="muted small">Shows current status of files created and last sync.</p>
+                            <p class="muted small">shows current status of app...</p>
                             <div class="space"></div>
-                            <div id="jellyfinStatus" class="muted small">—</div>
+                            <div id="app-status" class="muted small">—</div>
                             <div class="space"></div>
-                            <button id="refreshJellyfin" class="btn btn-primary">Refresh Status</button>
+                            <button id="refresh-status" class="btn btn-primary">refresh status</button>
                         </div>
 
                     </div>

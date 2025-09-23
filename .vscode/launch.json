@@ -11,9 +11,9 @@
             "program": "${workspaceFolder}/server.ts",
             "cwd": "${workspaceFolder}",
             "env": {},
-            "runtimeExecutable": "C:\\Users\\alex_\\AppData\\Local\\Microsoft\\WinGet\\Links\\deno.EXE",
+            "runtimeExecutable": "C:\\Users\\alex_\\.deno\\bin\\deno.exe",
             "runtimeArgs": [
-                "run", "--inspect-brk", "--allow-all", "--env-file", "--unstable-ffi"
+                "run", "--inspect-brk", "--allow-all", "--env-file", "--unstable-ffi", "--unstable-worker-options"
             ],
             "attachSimplePort": 9229
         }
