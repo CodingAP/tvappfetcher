@@ -23,44 +23,79 @@ interface M3ULinkUpdateBody {
  */
 interface M3UItem {
     /**
+     * id uses by the database
+     */
+    id: string;
+
+    /**
      * xui id - unused
      */
-    xuiId?: string;
+    xuiId: string;
 
     /**
      * id of the tv guide - used for epg
      */
-    tvgId?: string;
+    tvgId: string;
 
     /**
      * name of the tv guide - used for epg
      */
-    tvgName?: string;
+    tvgName: string;
 
     /**
      * logo of the tv guide - used for epg
      */
-    tvgLogo?: string;
+    tvgLogo: string;
 
     /**
      * name of the group it belongs to
      */
-    groupTitle?: string;
+    groupTitle: string;
 
     /**
-     * name of the channel
+     * name of the m3u item
      */
-    name?: string;
+    name: string;
 
     /**
-     * channel id to help identify channels
-     */
-    channelId?: string;
-
-    /**
-     * url of hte channel
+     * url of the m3u item
      */
     url: string;
+};
+
+/**
+ * data needed to parse a m3u channel specifically
+ */
+interface M3UChannel extends M3UItem {}
+
+/**
+ * data needed to parse a m3u movie specifically
+ */
+interface M3UMovie extends M3UItem {
+    /**
+     * if the movie has been fetched
+     */
+    fetched: boolean;
+};
+
+/**
+ * data needed to parse a m3u series specifically
+ */
+interface M3USeries extends M3UItem {
+    /**
+     * if the show has been fetched
+     */
+    fetched: boolean;
+
+    /**
+     * season number of the series episode
+     */
+    season: number;
+
+    /**
+     * episode number of the series episode
+     */
+    episode: number;
 };
 
 /**
@@ -80,22 +115,22 @@ interface M3UParsingMessageEventData {
     /**
      * status of the parsing
      */
-    status?: string;
+    status: string;
 
     /**
      * list of parsed channels
      */
-    channels?: M3UItem[];
+    channels?: M3UChannel[];
     
     /**
      * list of parsed movies
      */
-    movies?: M3UItem[];
+    movies?: M3UMovie[];
 
     /**
-     * list of parsed shows
+     * list of parsed series
      */
-    shows?: M3UItem[];
+    series?: M3USeries[];
 }
 
 /**
@@ -116,6 +151,6 @@ interface JSONToken {
 export type {
     LoginRequestBody,
     M3ULinkUpdateBody,
-    M3UItem, M3UParsingMessageEventData,
+    M3UItem, M3UChannel, M3UMovie, M3USeries, M3UParsingMessageEventData,
     JSONToken
 };

@@ -11,7 +11,7 @@
 
 import { Database } from '@db/sqlite';
 import { existsSync } from '@std/fs';
-import { M3UItem } from "../types.ts";
+import { M3UChannel, M3UMovie, M3USeries } from '../types.ts';
 
 /**
  * global database reference (essentially a singleton)
@@ -41,6 +41,9 @@ const getDatabase = (): Database => {
     } else {
         database = new Database('./data/data.db');
     }
+
+    database.exec('PRAGMA journal_mode = WAL;');
+    database.exec('PRAGMA synchronous = NORMAL;');
 
     return database;
 };
@@ -92,7 +95,7 @@ const selectSqlFile = (file: string) => {
 const updateM3ULink = (url: string) => {
     const timestamp = new Date().toISOString();
 
-    executeSqlFile('./src/database/sql/update-m3u.sql', { url, timestamp });
+    executeSqlFile('./src/database/sql/m3u/update-m3u.sql', { url, timestamp });
 };
 
 /**
@@ -101,23 +104,94 @@ const updateM3ULink = (url: string) => {
  * @returns the link from the database
  */
 const getM3ULink = (): string => {
-    const response = selectSqlFile('./src/database/sql/get-m3u.sql').get() as Record<string, string>;
-    return response['URL'];
+    const response = selectSqlFile('./src/database/sql/m3u/get-m3u.sql').get<{ URL: string, LAST_FETCHED: string }>()!;
+    return response.URL;
 };
 
 /**
  * checks if channel exists already, if so updates, if not creates
+ * 
+ * @param channel m3u channel data
  */
-const upsertChannel = (item: M3UItem) => {
-    const affected = executeSqlFile('./src/database/sql/update-channel.sql', { ...item });
+const upsertChannel = (channel: M3UChannel) => {
+    const affected = executeSqlFile('./src/database/sql/channel/update-channel.sql', { ...channel });
 
     // if no items were affected, add entry to database
     if (affected === 0) {
-        executeSqlFile('./src/database/sql/insert-channel.sql', { ...item });
+        executeSqlFile('./src/database/sql/channel/insert-channel.sql', { ...channel });
     }
+};
+
+const getChannel = (id: string): M3UChannel => {
+    const response = selectSqlFile('./src/database/sql/channel/get-channel.sql').get({ id }) as Record<string, string>;
+    return {
+        id: response['CHANNEL_ID'],
+        xuiId: response['XUI_ID'],
+        tvgId: response['TVG_ID'],
+        tvgName: response['TVG_NAME'],
+        tvgLogo: response['TVG_LOGO'],
+        groupTitle: response['GROUP_TITLE'],
+        name: response['NAME'],
+        url: response['URL']
+    };
 }
+
+/**
+ * checks if movie exists already, if so updates, if not creates
+ * 
+ * @param movie m3u movie data
+ */
+const upsertMovie = (movie: M3UMovie) => {
+    const data = {
+        id: movie.id,
+        xuiId: movie.xuiId,
+        tvgId: movie.tvgId,
+        tvgName: movie.tvgName,
+        tvgLogo: movie.tvgLogo,
+        groupTitle: movie.groupTitle,
+        name: movie.name,
+        url: movie.url,
+        fetched: movie.fetched ? '1' : '0'
+    };
+
+    const affected = executeSqlFile('./src/database/sql/movie/update-movie.sql', data);
+
+    // if no items were affected, add entry to database
+    if (affected === 0) {
+        executeSqlFile('./src/database/sql/movie/insert-movie.sql', data);
+    }
+};
+
+/**
+ * checks if series exists already, if so updates, if not creates
+ * 
+ * @param series m3u series data
+ */
+const upsertSeries = (series: M3USeries) => {
+    const data = {
+        id: series.id,
+        xuiId: series.xuiId,
+        tvgId: series.tvgId,
+        tvgName: series.tvgName,
+        tvgLogo: series.tvgLogo,
+        groupTitle: series.groupTitle,
+        name: series.name,
+        url: series.url,
+        season: series.season.toString(),
+        episode: series.episode.toString(),
+        fetched: series.fetched ? '1' : '0'
+    };
+
+    const affected = executeSqlFile('./src/database/sql/series/update-series.sql', data);
+
+    // if no items were affected, add entry to database
+    if (affected === 0) {
+        executeSqlFile('./src/database/sql/series/insert-series.sql', data);
+    }
+};
 
 export {
     updateM3ULink, getM3ULink,
-    upsertChannel
+    getChannel, upsertChannel,
+    upsertMovie, upsertSeries
 };

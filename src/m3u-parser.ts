@@ -1,6 +1,6 @@
-import { getM3ULink, updateM3ULink, upsertChannel } from './database/database.ts';
-import { getLogger } from "./logger.ts";
-import { M3UItem, M3UParsingMessageEventData } from './types.ts';
+import { getM3ULink, updateM3ULink, upsertChannel, upsertMovie, upsertSeries } from './database/database.ts';
+import { getLogger } from './logger.ts';
+import { M3UChannel, M3UMovie, M3USeries, M3UParsingMessageEventData } from './types.ts';
 
 const logger = getLogger();
 
@@ -9,9 +9,9 @@ class M3UParser {
     nextFetch: Date;
     status = 'waiting on fetch...';
 
-    channels: M3UItem[] = [];
-    movies: M3UItem[] = [];
-    shows: M3UItem[] = [];
+    channels: M3UChannel[] = [];
+    movies: M3UMovie[] = [];
+    series: M3USeries[] = [];
 
     constructor(url: string) {
         this.url = url;
@@ -62,51 +62,20 @@ class M3UParser {
             if (!data.success) {
                 logger.error(`failed parsing file - ${event.data.error}`);
             } else if (data.done) {
-                this.loadData(data);
+                this.channels = data.channels!;
+                this.movies = data.movies!;
+                this.series = data.series!;
+
                 worker.terminate();
-            } else {
-                this.status = data.status!;
+                logger.info('M3UParser.parseM3UFile - finished parsing and saving m3u file!');
             }
+            this.status = data.status;
         };
 
         worker.onerror = err => {
             logger.error(`crashed while parsing file - ${err.message}`);
             worker.terminate();
         };
-
-        worker.postMessage({ url: this.url });
-    }
-
-    loadData(data: M3UParsingMessageEventData)  {
-        this.channels = data.channels!;
-        this.movies = data.movies!;
-        this.shows = data.shows!;
-
-        logger.info(`M3UParser.loadData - uploading channels to database...`);
-
-        for (const channel of this.channels) {
-            upsertChannel(channel);
-        }
-
-        logger.info('M3UParser.loadData - uploaded channels to database!');
-
-        logger.info(`M3UParser.loadData - uploading movies to database...`);
-
-        for (const channel of this.channels) {
-            upsertChannel(channel);
-        }
-
-        logger.info('M3UParser.loadData - uploaded movies to database!');
-
-        logger.info(`M3UParser.loadData - uploading shows to database...`);
-
-        for (const channel of this.channels) {
-            upsertChannel(channel);
-        }
-
-        logger.info('M3UParser.loadData - uploaded shows to database!');
-
-        this.status = `finished parsing m3u file!`;
     }
 };
 

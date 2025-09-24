@@ -1,0 +1,2 @@
+INSERT INTO SERIES (SERIES_ID, XUI_ID, TVG_ID, TVG_NAME, TVG_LOGO, GROUP_TITLE, NAME, URL, SEASON, EPISODE, FETCHED)
+VALUES (:id, :xuiId, :tvgId, :tvgName, :tvgLogo, :groupTitle, :name, :url, :season, :episode, :fetched)

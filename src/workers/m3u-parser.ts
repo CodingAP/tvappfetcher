@@ -1,25 +1,9 @@
 /// <reference lib="webworker" />
 
-import type { M3UItem } from '../types.ts';
+import type { M3UItem, M3UChannel, M3UMovie, M3USeries } from '../types.ts';
+import { getM3ULink, upsertChannel, upsertMovie, upsertSeries } from "../database/database.ts";
 
-self.onmessage = async (event: MessageEvent) => {
-    const { url } = event.data;
-    try {
-        const { channels, movies, shows } = await parseM38File(url);
-        self.postMessage({
-            success: true,
-            done: true,
-            status: 'finished parsing m3u file!',
-            channels,
-            movies,
-            shows,
-        });
-    } catch (err) {
-        self.postMessage({ success: false, error: (err instanceof Error) ? err.message : String(err) });
-    }
-};
-
-const parseM38File = async (url: string) => {
+const parseM3UFile = async (url: string) => {
     self.postMessage({
         success: true,
         done: false,
@@ -46,7 +30,7 @@ const parseM38File = async (url: string) => {
 
     const channels: M3UItem[] = [];
     const movies: M3UItem[] = [];
-    const shows: M3UItem[] = [];
+    const series: M3UItem[] = [];
 
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
@@ -61,7 +45,7 @@ const parseM38File = async (url: string) => {
             }
 
             const nameMatch = line.match(/",(.*)$/);
-            const displayName = nameMatch ? nameMatch[1].trim() : undefined;
+            const displayName = nameMatch ? nameMatch[1].trim() : 'no title';
 
             self.postMessage({
                 success: true,
@@ -70,6 +54,7 @@ const parseM38File = async (url: string) => {
             });
 
             const item: M3UItem = {
+                id: '',
                 xuiId: attributes['xui-id'],
                 tvgId: attributes['tvg-id'],
                 tvgName: attributes['tvg-name'] || displayName,
@@ -80,38 +65,94 @@ const parseM38File = async (url: string) => {
             };
 
             if (url.includes('movie')) {
-                movies.push(item);
+                const movie = item as M3UMovie;
+                movie.id = getID(displayName, 'movie');
+                movie.fetched = false;
+                movies.push(movie);
+
+                upsertMovie(movie);
             } else if (url.includes('series')) {
-                shows.push(item);
+                const seriesItem = item as M3USeries;
+                const episodeData = getEpisodeData(displayName);
+                seriesItem.id = getID(displayName, 'series');
+                seriesItem.groupTitle = episodeData.series;
+                seriesItem.season = episodeData.season;
+                seriesItem.episode = episodeData.episode;
+                seriesItem.fetched = false;
+                series.push(seriesItem);
+
+                upsertSeries(seriesItem);
             } else {
-                item.channelId = createChannelID(displayName!);
-                channels.push(item);
+                const channel = item as M3UChannel;
+                channel.id = getID(displayName, 'channel');
+                channels.push(channel);
+
+                upsertChannel(channel);
             }
             i++;
         }
     }
 
-    return { channels, movies, shows };
+    return { channels, movies, series };
 };
 
 /**
  * create an identifier that removes things like special characters and one-time show names 
  * 
  * @param displayName raw display name 
+ * @param type type of m3u item
  * @returns unique identifier
  */
-const createChannelID = (displayName: string) => {
+const getID = (displayName: string, type: string): string => {
     let result = displayName.toLowerCase().trim();
 
     // remove anything past a colon except for some channels that need it for formatting
     const antiColon = ['SPFL', '24/7', 'XXX'];
-    if (!antiColon.some(channel => displayName.startsWith(channel))) {
+    if (!antiColon.some(channel => displayName.startsWith(channel)) && type === 'channel') {
         result = result.split(/[:]/g)[0];
     }
 
-    result = result.replace(/[|()\[\]:]/g, ''); // remove unwanted characters
+    result = result.replace(/[|()\[\]:,.]/g, ''); // remove unwanted characters
     result = result.replace(/\s+/g, '-'); // normalize spaces and make them dashes
     result = result.replace(/\-+/g, '-'); // normalize multiple dashes
     result = result.replace(/[^\x00-\x7F]/g, ''); // remove non-ascii characters
+
     return result.trim();
+};
+
+/**
+ * extracts the series name, season, and episode
+ * 
+ * @param displayName display name with season/episode
+ * @return season and episode
+ */
+const getEpisodeData = (displayName: string): { series: string, season: number, episode: number } => {
+    const nameSeasonEpisode = displayName.match(/(.+) S(\d+) E(\d+)/);
+    if (nameSeasonEpisode) {
+        const [_, series, season, episode] = [...nameSeasonEpisode];
+        return { series, season: parseInt(season), episode: parseInt(episode) };
+    }
+
+    const seasonEpisode = displayName.match(/S(\d+) E(\d+)/);
+    if (seasonEpisode) {
+        const [_, season, episode] = [...seasonEpisode];
+        return { series: '', season: parseInt(season), episode: parseInt(episode) };
+    }
+
+    return { series: 'error', season: 0, episode: 0 };
+};
+
+try {
+    const { channels, movies, series } = await parseM3UFile(getM3ULink());
+
+    self.postMessage({
+        success: true,
+        done: true,
+        status: 'finished parsing m3u file!',
+        channels,
+        movies,
+        series,
+    });
+} catch (err) {
+    self.postMessage({ success: false, error: (err instanceof Error) ? err.message : String(err) });
 }

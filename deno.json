@@ -9,8 +9,5 @@
 		"@std/fs": "jsr:@std/fs@^1.0.19",
 		"@std/http": "jsr:@std/http@^1.0.20",
 		"@std/path": "jsr:@std/path@^1.1.2"
-	},
-	"exclude": [
-		"./workers/**.ts"
-	]
+	}
 }
