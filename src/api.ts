@@ -148,7 +148,7 @@ const routes: Route[] = [
                 const movies = getMovies(search, page, pageSize, body.fetched);
 
                 // return the list of movies as well as the total amount of movies
-                logger.info(`POST /api/movie/search - successfully obtained ${pageSize} movies!`);
+                logger.info(`POST /api/movie/search - successfully obtained ${movies.length} movies!`);
                 return new Response(JSON.stringify({ movies, total: totalMovies }), { status: 200, headers: defaultHeaders });
             }
 
@@ -213,7 +213,7 @@ const routes: Route[] = [
                 const series = getSeries(search, page, pageSize, body.fetched);
 
                 // return the list of series as well as the total amount of series
-                logger.info(`POST /api/series/search - successfully obtained ${pageSize} series!`);
+                logger.info(`POST /api/series/search - successfully obtained ${series.length} series!`);
                 return new Response(JSON.stringify({ series, total: totalSeries }), { status: 200, headers: defaultHeaders });
             }
 

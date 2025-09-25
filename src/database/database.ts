@@ -33,7 +33,7 @@ const getDatabase = (): Database => {
 
     // create directory for the database if needed
     if (!existsSync('./data/data.db')) {
-        Deno.mkdirSync('./data');
+        if (!existsSync('./data')) Deno.mkdirSync('./data');
         database = new Database('./data/data.db');
 
         // initialize database if needed

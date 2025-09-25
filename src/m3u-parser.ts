@@ -17,6 +17,19 @@ class M3UParser {
         this.nextFetch = new Date();
         this.nextFetch.setDate(this.nextFetch.getDate() + 1);
         this.nextFetch.setHours(2, 30, 0, 0);
+
+        // every five minutes, check for an automated fetch
+        setInterval(() => {
+            logger.info('M3UParser - checking for an automated fetch...');
+
+            if (new Date().getTime() > this.nextFetch.getTime()) {
+                logger.info('M3UParser - it is time for an automated fetch!');
+                this.parseM3UFile();
+                this.nextFetch = new Date();
+                this.nextFetch.setDate(this.nextFetch.getDate() + 1);
+                this.nextFetch.setHours(2, 30, 0, 0);
+            }
+        }, 1000 * 60 * 5);
     }
 
     /**
@@ -46,6 +59,10 @@ class M3UParser {
      * throws error if unsuccessful
      */
     parseM3UFile() {
+        // update last fetch timestamp
+        const settings = getSettings();
+        updateSettings(settings.url, settings.channelsSavePath, settings.moviesSavePath, settings.seriesSavePath);
+
         // run parsing in the background
         const worker = new Worker(new URL('./workers/m3u-parser.ts', import.meta.url).href, { type: 'module', deno: { permissions: 'inherit' } });
         this.isParsing = true;
@@ -90,7 +107,7 @@ class M3UParser {
             if (!data.success) {
                 logger.error(`failed creating file - ${event.data.error}`);
             } else if (data.done) {
-                this.isParsing = false;
+                this.isCreating = false;
                 worker.terminate();
                 logger.info('M3UParser.createFiles - finished creating all files!');
             }
