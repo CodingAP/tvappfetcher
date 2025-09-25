@@ -198,32 +198,12 @@ td {
     text-align: left
 }
 
-.pill {
-    display: inline-block;
-    padding: 6px 8px;
-    border-radius: 999px;
-    background: #f1f5f9;
-    font-size: 12px
-}
-
 .small {
     font-size: 13px
 }
 
 .right {
     margin-left: auto
-}
-
-.notice {
-    font-size: 13px;
-    color: light-dark(var(--muted-light), var(--muted-dark));
-}
-
-.search {
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid #e6e9ef;
-    width: 100%;
 }
 
 .list-scroll {

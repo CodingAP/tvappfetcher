@@ -7,6 +7,7 @@
     <title>tvappfetcher - codingap</title>
     <link rel="stylesheet" href="/static/css/index.css">
     <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+    <script src="/static/js/paginator.js"></script>
     <script src="/static/js/index.js"></script>
 </head>
 
@@ -46,30 +47,15 @@
                 <div class="grid">
                     <nav class="card">
                         <ul>
-                            <li><button data-tab="sources" class="active">sources & fetch</button></li>
                             <li><button data-tab="channels">channels</button></li>
-                            <li><button data-tab="requests">movies & tv</button></li>
-                            <li><button data-tab="jellyfin">status</button></li>
+                            <li><button data-tab="movies">movies</button></li>
+                            <li><button data-tab="series">tv series</button></li>
+                            <li><button data-tab="status">status</button></li>
+                            <li><button data-tab="settings" class="active">settings</button></li>
                         </ul>
                     </nav>
 
                     <div>
-                        <div id="tab-sources" class="card tab-panel">
-                            <h3>sources & fetch</h3>
-                            <label for="m3u-url">paste a m3u or m3u8 url</label>
-                            <input id="m3u-url" type="url" placeholder="https://example.com/playlist.m3u8" />
-                            <div class="space"></div>
-                            <div class="row">
-                                <div>
-                                    <button id="save-url" class="button button-primary">save</button>
-                                    <button id="fetch-now" class="button button-ghost">fetch now</button>
-                                </div>
-                                <div class="right small muted" id="next-fetch">next fetch: —</div>
-                            </div>
-                            <div class="space"></div>
-                            <div id="source-message" class="small"></div>
-                        </div>
-
                         <div id="tab-channels" class="card tab-panel" style="display:none">
                             <h3>channels</h3>
                             <div class="row">
@@ -98,36 +84,80 @@
                             </div>
                         </div>
 
-                        <div id="tab-requests" class="card tab-panel" style="display:none">
-                            <h3>Movie & TV Requests</h3>
-                            <p class="muted small">Request items from the database to be created for Jellyfin.</p>
+                        <div id="tab-movies" class="card tab-panel" style="display:none">
+                            <h3>movie requests</h3>
                             <div class="space"></div>
                             <div class="row">
-                                <select id="mediaType">
-                                    <option value="movie">Movie</option>
-                                    <option value="tv">TV Show</option>
-                                </select>
-                                <input id="searchMedia" class="search" placeholder="Search movie or show" />
-                                <button id="requestBtn" class="btn btn-primary">Request</button>
+                                <input id="search-movie" type="text" placeholder="search movie..." />
+                                <button id="search-movie-button" class="button button-primary">search</button>
                             </div>
 
                             <div class="space"></div>
-                            <div class="muted small">Available items</div>
-                            <div class="list-scroll card" id="mediaList" style="margin-top:8px"></div>
+                            <h4>all movies</h4>
+                            <item-paginator id="all-movies"></item-paginator>
+                            <div class="space"></div>
+                            <div id="all-movies-message" class="small"></div>
 
                             <div class="space"></div>
-                            <div class="muted small">Active in Jellyfin</div>
-                            <div class="list-scroll card" id="jellyfinActive" style="margin-top:8px"></div>
+                            <h4>fetched movies</h4>
+                            <item-paginator id="fetched-movies"></item-paginator>
+                            <div class="space"></div>
+                            <div id="fetched-movies-message" class="small"></div>
                         </div>
 
-                        <div id="tab-jellyfin" class="card tab-panel" style="display:none">
-                            <p class="muted small">shows current status of app...</p>
+                        <div id="tab-series" class="card tab-panel" style="display:none">
+                            <h3>tv series requests</h3>
                             <div class="space"></div>
-                            <div id="app-status" class="muted small">—</div>
+                            <div class="row">
+                                <input id="search-series" type="text" placeholder="search tv series..." />
+                                <button id="search-series-button" class="button button-primary">search</button>
+                            </div>
+
                             <div class="space"></div>
-                            <button id="refresh-status" class="btn btn-primary">refresh status</button>
+                            <h4>all tv series</h4>
+                            <item-paginator id="all-series"></item-paginator>
+                            <div class="space"></div>
+                            <div id="all-series-message" class="small"></div>
+
+                            <div class="space"></div>
+                            <h4>fetched tv series</h4>
+                            <item-paginator id="fetched-series"></item-paginator>
+                            <div class="space"></div>
+                            <div id="fetched-series-message" class="small"></div>
                         </div>
 
+                        <div id="tab-status" class="card tab-panel" style="display:none">
+                            <h3>status</h3>
+                            <p class="muted small">current status of app: <span id="app-status" class="muted small">—</span></p>
+                            <div class="space"></div>
+                            <button id="refresh-status" class="button button-primary">refresh status</button>
+                        </div>
+
+                        <div id="tab-settings" class="card tab-panel">
+                            <h3>settings</h3>
+                            <div class="space"></div>
+                            <label for="m3u-url">paste a m3u or m3u8 url</label>
+                            <input id="m3u-url" type="url" placeholder="https://example.com/playlist.m3u8" />
+                            <div class="space"></div>
+                            <div class="row">
+                                <button id="fetch-now" class="button button-primary">fetch now</button>
+                                <button id="create-now" class="button button-primary">create now</button>
+                                <span id="fetch-message" class="small"></span>
+                                <div class="right small muted" id="next-fetch">next fetch: —</div>
+                            </div>
+                            <div class="space"></div>
+                            <label for="channels-save-path">channels save path</label>
+                            <input id="channels-save-path" type="text" placeholder="file path (ex. /data/playlist.m3u...)" />
+                            <div class="space"></div>
+                            <label for="movies-save-path">movies save path</label>
+                            <input id="movies-save-path" type="text" placeholder="file path (ex. /data/movies...)" />
+                            <div class="space"></div>
+                            <label for="series-save-path">tv series save path</label>
+                            <input id="series-save-path" type="text" placeholder="file path (ex. /data/tv...)" />
+                            <div class="space"></div>
+                            <button id="save-settings" class="button button-primary">save</button>
+                            <span id="settings-message" class="small"></span>
+                        </div>
                     </div>
                 </div>
             </section>

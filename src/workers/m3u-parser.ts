@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import type { M3UItem, M3UChannel, M3UMovie, M3USeries } from '../types.ts';
-import { getM3ULink, upsertChannel, upsertMovie, upsertSeries } from "../database/database.ts";
+import { getSettings, upsertChannel, upsertMovie, upsertSeries } from "../database/database.ts";
 
 const parseM3UFile = async (url: string) => {
     self.postMessage({
@@ -27,10 +27,6 @@ const parseM3UFile = async (url: string) => {
     }
 
     const total = (lines.length - 1) / 2;
-
-    const channels: M3UItem[] = [];
-    const movies: M3UItem[] = [];
-    const series: M3UItem[] = [];
 
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
@@ -68,32 +64,24 @@ const parseM3UFile = async (url: string) => {
                 const movie = item as M3UMovie;
                 movie.id = getID(displayName, 'movie');
                 movie.fetched = false;
-                movies.push(movie);
-
                 upsertMovie(movie);
             } else if (url.includes('series')) {
-                const seriesItem = item as M3USeries;
+                const series = item as M3USeries;
                 const episodeData = getEpisodeData(displayName);
-                seriesItem.id = getID(displayName, 'series');
-                seriesItem.groupTitle = episodeData.series;
-                seriesItem.season = episodeData.season;
-                seriesItem.episode = episodeData.episode;
-                seriesItem.fetched = false;
-                series.push(seriesItem);
-
-                upsertSeries(seriesItem);
+                series.id = getID(displayName, 'series');
+                series.groupTitle = episodeData.series;
+                series.season = episodeData.season;
+                series.episode = episodeData.episode;
+                series.fetched = false;
+                upsertSeries(series);
             } else {
                 const channel = item as M3UChannel;
                 channel.id = getID(displayName, 'channel');
-                channels.push(channel);
-
                 upsertChannel(channel);
             }
             i++;
         }
     }
-
-    return { channels, movies, series };
 };
 
 /**
@@ -143,15 +131,12 @@ const getEpisodeData = (displayName: string): { series: string, season: number, 
 };
 
 try {
-    const { channels, movies, series } = await parseM3UFile(getM3ULink());
+    await parseM3UFile(getSettings().url);
 
     self.postMessage({
         success: true,
         done: true,
-        status: 'finished parsing m3u file!',
-        channels,
-        movies,
-        series,
+        status: 'finished parsing m3u file!'
     });
 } catch (err) {
     self.postMessage({ success: false, error: (err instanceof Error) ? err.message : String(err) });

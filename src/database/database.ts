@@ -11,7 +11,7 @@
 
 import { Database } from '@db/sqlite';
 import { existsSync } from '@std/fs';
-import { M3UChannel, M3UMovie, M3USeries } from '../types.ts';
+import { M3UChannel, M3UMovie, M3USeries, M3USettings } from '../types.ts';
 
 /**
  * global database reference (essentially a singleton)
@@ -56,7 +56,7 @@ const getDatabase = (): Database => {
  * @param file path to the sql file
  * @param args all arguments needed for sql
  */
-const executeSqlFile = (file: string, args?: { [key: string]: string }): number => {
+const executeSqlFile = (file: string, args?: { [key: string]: string | number }): number => {
     const database = getDatabase(); 
 
     // cache the query to prevent file i/o from being taken up
@@ -92,10 +92,10 @@ const selectSqlFile = (file: string) => {
  * 
  * @param url updated url
  */
-const updateM3ULink = (url: string) => {
+const updateSettings = (url: string, channelsSavePath: string, moviesSavePath: string, seriesSavePath: string) => {
     const timestamp = new Date().toISOString();
 
-    executeSqlFile('./src/database/sql/m3u/update-m3u.sql', { url, timestamp });
+    executeSqlFile('./src/database/sql/settings/update-settings.sql', { url, timestamp, channelsSavePath, moviesSavePath, seriesSavePath });
 };
 
 /**
@@ -103,9 +103,15 @@ const updateM3ULink = (url: string) => {
  * 
  * @returns the link from the database
  */
-const getM3ULink = (): string => {
-    const response = selectSqlFile('./src/database/sql/m3u/get-m3u.sql').get<{ URL: string, LAST_FETCHED: string }>()!;
-    return response.URL;
+const getSettings = (): M3USettings => {
+    const response = selectSqlFile('./src/database/sql/settings/get-settings.sql').get<{ URL: string, LAST_FETCHED: string, CHANNELS_SAVE_PATH: string, MOVIES_SAVE_PATH: string, SERIES_SAVE_PATH: string }>()!;
+    return {
+        url: response.URL,
+        lastFetched: response.LAST_FETCHED,
+        channelsSavePath: response.CHANNELS_SAVE_PATH,
+        moviesSavePath: response.MOVIES_SAVE_PATH,
+        seriesSavePath: response.SERIES_SAVE_PATH
+    };
 };
 
 /**
@@ -122,19 +128,34 @@ const upsertChannel = (channel: M3UChannel) => {
     }
 };
 
+/**
+ * gets channel based on id
+ * 
+ * @param id channel id
+ */
 const getChannel = (id: string): M3UChannel => {
-    const response = selectSqlFile('./src/database/sql/channel/get-channel.sql').get({ id }) as Record<string, string>;
+    const response = selectSqlFile('./src/database/sql/channel/get-channel.sql').get<{ CHANNEL_ID: string, XUI_ID: string, TVG_ID: string, TVG_NAME: string, TVG_LOGO: string, GROUP_TITLE: string, NAME: string, URL: string }>({ id })!;
     return {
-        id: response['CHANNEL_ID'],
-        xuiId: response['XUI_ID'],
-        tvgId: response['TVG_ID'],
-        tvgName: response['TVG_NAME'],
-        tvgLogo: response['TVG_LOGO'],
-        groupTitle: response['GROUP_TITLE'],
-        name: response['NAME'],
-        url: response['URL']
+        id: response.CHANNEL_ID,
+        xuiId: response.XUI_ID,
+        tvgId: response.TVG_ID,
+        tvgName: response.TVG_NAME,
+        tvgLogo: response.TVG_LOGO,
+        groupTitle: response.GROUP_TITLE,
+        name: response.NAME,
+        url: response.URL
     };
-}
+};
+
+/**
+ * counts total amount of channels in database
+ * 
+ * @param id movie id
+ */
+const countChannels = (): number => {
+    const response = selectSqlFile('./src/database/sql/channel/count-channels.sql').get<{ TOTAL: number }>()!;
+    return response?.TOTAL;
+};
 
 /**
  * checks if movie exists already, if so updates, if not creates
@@ -150,17 +171,65 @@ const upsertMovie = (movie: M3UMovie) => {
         tvgLogo: movie.tvgLogo,
         groupTitle: movie.groupTitle,
         name: movie.name,
-        url: movie.url,
-        fetched: movie.fetched ? '1' : '0'
+        url: movie.url
     };
 
     const affected = executeSqlFile('./src/database/sql/movie/update-movie.sql', data);
 
     // if no items were affected, add entry to database
     if (affected === 0) {
-        executeSqlFile('./src/database/sql/movie/insert-movie.sql', data);
+        executeSqlFile('./src/database/sql/movie/insert-movie.sql', { ...data, fetched: 0 });
     }
 };
+
+/**
+ * gets all movies based on pagination
+ * 
+ * @param page current page
+ * @param pageSize size of the pages
+ */
+const getMovies = (search: string, page: number, pageSize: number, fetched: boolean): M3UMovie[] => {
+    const sqlFile = fetched ? './src/database/sql/movie/get-fetched-movies.sql' : './src/database/sql/movie/get-movies.sql';
+    const response = selectSqlFile(sqlFile).all<{ MOVIE_ID: string, XUI_ID: string, TVG_ID: string, TVG_NAME: string, TVG_LOGO: string, GROUP_TITLE: string, NAME: string, URL: string, FETCHED: number }>({ search, pageSize, offset: page * pageSize });
+
+    const result: M3UMovie[] = [];
+    for (const movie of response) {
+        result.push({
+            id: movie.MOVIE_ID,
+            xuiId: movie.XUI_ID,
+            tvgId: movie.TVG_ID,
+            tvgName: movie.TVG_NAME,
+            tvgLogo: movie.TVG_LOGO,
+            groupTitle: movie.GROUP_TITLE,
+            name: movie.NAME,
+            url: movie.URL,
+            fetched: movie.FETCHED === 1
+        });
+    }
+
+    return result;
+};
+
+/**
+ * counts total amount of movies in database
+ * 
+ * @param search filter string
+ */
+const countMovies = (search: string, fetched: boolean): number => {
+    const sqlFile = fetched ? './src/database/sql/movie/count-fetched-movies.sql' : './src/database/sql/movie/count-movies.sql';
+    const response = selectSqlFile(sqlFile).get<{ TOTAL: number }>({ search })!;
+    return response?.TOTAL;
+};
+
+/**
+ * updates the fetched data on a movie
+ * 
+ * @param id id of the movie
+ * @param fetched update fetched status
+ */
+const updateMovieFetched = (id: string, fetched: boolean) => {
+    executeSqlFile('./src/database/sql/movie/update-movie-fetch.sql', { id, fetched: fetched ? '1' : '0' });
+}
 
 /**
  * checks if series exists already, if so updates, if not creates
@@ -178,20 +247,97 @@ const upsertSeries = (series: M3USeries) => {
         name: series.name,
         url: series.url,
         season: series.season.toString(),
-        episode: series.episode.toString(),
-        fetched: series.fetched ? '1' : '0'
+        episode: series.episode.toString()
     };
 
     const affected = executeSqlFile('./src/database/sql/series/update-series.sql', data);
 
     // if no items were affected, add entry to database
     if (affected === 0) {
-        executeSqlFile('./src/database/sql/series/insert-series.sql', data);
+        executeSqlFile('./src/database/sql/series/insert-series.sql', { ...data, fetched: 0 });
     }
 };
 
+/**
+ * gets all series based on pagination
+ * 
+ * @param search filter text
+ * @param page current page
+ * @param pageSize size of the pages
+ * @param fetched gets either all of just the fetched items
+ */
+const getSeries = (search: string, page: number, pageSize: number, fetched: boolean): M3USeries[] => {
+    const sqlFile = fetched ? './src/database/sql/series/get-fetched-series.sql' : './src/database/sql/series/get-series.sql';
+    const response = selectSqlFile(sqlFile).all<{ SERIES_ID: string, XUI_ID: string, TVG_ID: string, TVG_NAME: string, TVG_LOGO: string, GROUP_TITLE: string, NAME: string, URL: string, SEASON: number, EPISODE: number, FETCHED: number }>({ search, pageSize, offset: page * pageSize });
+
+    const result: M3USeries[] = [];
+    for (const series of response) {
+        result.push({
+            id: series.SERIES_ID,
+            xuiId: series.XUI_ID,
+            tvgId: series.TVG_ID,
+            tvgName: series.TVG_NAME,
+            tvgLogo: series.TVG_LOGO,
+            groupTitle: series.GROUP_TITLE,
+            name: series.NAME,
+            url: series.URL,
+            season: series.SEASON,
+            episode: series.EPISODE,
+            fetched: series.FETCHED === 1
+        });
+    }
+
+    return result;
+};
+
+const getFetchedEpisodes = () => {
+    const response = selectSqlFile('./src/database/sql/series/get-fetched-episodes.sql').all<{ SERIES_ID: string, XUI_ID: string, TVG_ID: string, TVG_NAME: string, TVG_LOGO: string, GROUP_TITLE: string, NAME: string, URL: string, SEASON: number, EPISODE: number, FETCHED: number }>();
+
+    const result: M3USeries[] = [];
+    for (const series of response) {
+        result.push({
+            id: series.SERIES_ID,
+            xuiId: series.XUI_ID,
+            tvgId: series.TVG_ID,
+            tvgName: series.TVG_NAME,
+            tvgLogo: series.TVG_LOGO,
+            groupTitle: series.GROUP_TITLE,
+            name: series.NAME,
+            url: series.URL,
+            season: series.SEASON,
+            episode: series.EPISODE,
+            fetched: series.FETCHED === 1
+        });
+    }
+
+    return result;
+} 
+
+/**
+ * counts total amount of movies in database
+ * 
+ * @param search filter string
+ */
+const countSeries = (search: string, fetched: boolean): number => {
+    const sqlFile = fetched ? './src/database/sql/series/count-fetched-series.sql' : './src/database/sql/series/count-series.sql';
+    const response = selectSqlFile(sqlFile).get<{ TOTAL: number }>({ search })!;
+    return response?.TOTAL;
+};
+
+/**
+ * updates the fetched data on a movie
+ * 
+ * @param id id of the movie
+ * @param fetched update fetched status
+ */
+const updateSeriesFetched = (groupTitle: string, fetched: boolean) => {
+    console.log(groupTitle, fetched);
+    executeSqlFile('./src/database/sql/series/update-series-fetch.sql', { groupTitle, fetched: fetched ? '1' : '0' });
+}
+
 export {
-    updateM3ULink, getM3ULink,
-    getChannel, upsertChannel,
-    upsertMovie, upsertSeries
+    updateSettings, getSettings,
+    getChannel, upsertChannel, countChannels,
+    getMovies, upsertMovie, countMovies, updateMovieFetched,
+    getSeries, getFetchedEpisodes, upsertSeries, countSeries, updateSeriesFetched
 };

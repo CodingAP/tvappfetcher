@@ -11,11 +11,96 @@ interface LoginRequestBody {
 /**
  * the body for a update m3u link request (/api/m3u)
  */
-interface M3ULinkUpdateBody {
+interface SettingsUpdateBody {
     /**
      * the updated url 
      */
     url: string;
+
+    /**
+     * updated path to save channel m3u file
+     */
+    channelsSavePath: string;
+
+    /**
+     * updated path to save movies
+     */
+    moviesSavePath: string;
+
+    /**
+     * updated path to save series
+     */
+    seriesSavePath: string;
+};
+
+/**
+ * the body for a paginator search request
+ */
+interface PaginatorSearchRequestBody {
+    /**
+     * filter string for the search
+     */
+    search: string;
+
+    /**
+     * if we are looking for fetched specifically
+     */
+    fetched: boolean;
+
+    /**
+     * current page for the search
+     */
+    page: number;
+
+    /**
+     * page size for the search
+     */
+    pageSize: number;
+};
+
+/**
+ * the body for a fetch request
+ */
+interface FetchItemRequestBody {
+    /**
+     * id of the m3u item
+     */
+    id: string;
+    
+    /**
+     * fetched status to update to
+     */
+    fetched: boolean;
+};
+
+/**
+ * settings for the application
+ */
+interface M3USettings {
+    /**
+     * url to fetch m3u file from
+     */
+    url: string;
+
+    /**
+     * last time the file was fetched
+     */
+    lastFetched: string;
+
+    /**
+     * path to save channel m3u file
+     */
+    channelsSavePath: string;
+
+    /**
+     * path to save movies
+     */
+    moviesSavePath: string;
+
+    /**
+     * path to save series
+     */
+    seriesSavePath: string;
 };
 
 /**
@@ -116,22 +201,7 @@ interface M3UParsingMessageEventData {
      * status of the parsing
      */
     status: string;
-
-    /**
-     * list of parsed channels
-     */
-    channels?: M3UChannel[];
-    
-    /**
-     * list of parsed movies
-     */
-    movies?: M3UMovie[];
-
-    /**
-     * list of parsed series
-     */
-    series?: M3USeries[];
-}
+};
 
 /**
  * the custom json web token 
@@ -150,7 +220,9 @@ interface JSONToken {
 
 export type {
     LoginRequestBody,
-    M3ULinkUpdateBody,
-    M3UItem, M3UChannel, M3UMovie, M3USeries, M3UParsingMessageEventData,
+    SettingsUpdateBody,
+    PaginatorSearchRequestBody,
+    FetchItemRequestBody,
+    M3USettings, M3UItem, M3UChannel, M3UMovie, M3USeries, M3UParsingMessageEventData,
     JSONToken
 };

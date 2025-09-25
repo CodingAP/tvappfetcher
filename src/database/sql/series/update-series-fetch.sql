@@ -1,0 +1,3 @@
+UPDATE SERIES
+SET FETCHED = :fetched
+WHERE GROUP_TITLE = :groupTitle

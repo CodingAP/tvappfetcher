@@ -1,0 +1,4 @@
+SELECT COUNT(*) AS TOTAL
+FROM MOVIES
+WHERE NAME LIKE '%' || :search || '%'
+AND FETCHED = 1;

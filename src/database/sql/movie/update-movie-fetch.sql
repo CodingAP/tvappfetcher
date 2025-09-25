@@ -1,0 +1,3 @@
+UPDATE MOVIES
+SET FETCHED = :fetched
+WHERE MOVIE_ID = :id
