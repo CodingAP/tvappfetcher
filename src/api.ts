@@ -25,7 +25,6 @@ const routes: Route[] = [
                 // encrypted session token and send to client
                 const passwordBuffer = new TextEncoder().encode(body.password + Deno.env.get('SALT'));
                 const hashBuffer = await crypto.subtle.digest('SHA-256', passwordBuffer);
-                console.log(encodeHex(hashBuffer));
                 if (Deno.env.get('HASH') === encodeHex(hashBuffer)) {
                     const cookie = await encrypt(JSON.stringify({ timestamp: new Date().toISOString(), id: 'codingap' }));
                     const headers = new Headers();
