@@ -1,0 +1,2 @@
+INSERT INTO FILTERS (FILTER_TEXT, FILTER_TYPE)
+VALUES (:filterText, :filterType);

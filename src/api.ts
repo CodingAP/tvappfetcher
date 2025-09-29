@@ -5,8 +5,8 @@ import { type Route } from '@std/http/unstable-route';
 import { getLogger } from './logger.ts';
 import { getParser } from './m3u-parser.ts';
 import { encrypt } from './middleware.ts';
-import { FetchItemRequestBody, LoginRequestBody, PaginatorSearchRequestBody, SettingsUpdateBody } from './types.ts';
-import { countMovies, countSeries, getMovies, getSeries, getSettings, updateMovieFetched, updateSeriesFetched, updateSettings } from "./database/database.ts";
+import { CreateFilterRequestBody, DeleteFilterRequestBody, FetchItemRequestBody, LoginRequestBody, M3UChannel, PaginatorSearchRequestBody, SettingsUpdateBody } from './types.ts';
+import { countChannels, countMovies, countSeries, getChannels, getFilters, getMovies, getSeries, getSettings, insertFilter, removeFilter, updateMovieFetched, updateSeriesFetched, updateSettings } from "./database/database.ts";
 
 const logger = getLogger();
 const parser = getParser();
@@ -253,6 +253,149 @@ const routes: Route[] = [
 
             logger.warn('PUT /api/series/fetch - failed to update series!');
             return new Response(JSON.stringify({ message: 'failed to update series!' }), { status: 400, headers: defaultHeaders });
+        }
+    },
+    {
+        method: ['POST'],
+        pattern: new URLPattern({ pathname: '/api/channel/search' }),
+        handler: async (request) => {
+            // try to get all channels currently loaded
+            if (parser.isParsing || parser.isCreating) {
+                logger.warn(`POST /api/channel/search - failed to get channels (still parsing/creating files!)`);
+                return new Response(JSON.stringify({ message: 'currently parsing/creating files! please wait...' }), { status: 401, headers: defaultHeaders });
+            }
+
+            if (request.headers.get('Content-Type') === 'application/json') {
+                const body = (await request.json()) as PaginatorSearchRequestBody;
+    
+                const total = countChannels();
+                let page = body.page || 0;
+                const pageSize = body.pageSize || total;
+
+                if (page * pageSize > total) page = 0;
+
+                const channels = getChannels(page, pageSize);
+
+                // return the list of series as well as the total amount of series
+                logger.info(`POST /api/channel/search - successfully obtained ${channels.length} channels!`);
+                return new Response(JSON.stringify({ channels, total }), { status: 200, headers: defaultHeaders });
+            }
+
+            logger.warn('POST /api/channel/search - failed to get channels!');
+            return new Response(JSON.stringify({ message: 'failed to get channels!' }), { status: 400, headers: defaultHeaders });
+        }
+    },
+    {
+        method: ['POST'],
+        pattern: new URLPattern({ pathname: '/api/channel/search-filtered' }),
+        handler: async (request) => {
+            // try to get all channels currently loaded
+            if (parser.isParsing || parser.isCreating) {
+                logger.warn(`POST /api/channel/search-filtered - failed to get filtered channels (still parsing/creating files!)`);
+                return new Response(JSON.stringify({ message: 'currently parsing/creating files! please wait...' }), { status: 401, headers: defaultHeaders });
+            }
+
+            if (request.headers.get('Content-Type') === 'application/json') {
+                const body = (await request.json()) as PaginatorSearchRequestBody;
+    
+                const allChannels = getChannels(0, countChannels());
+                const filters = getFilters();
+                const filteredChannels: M3UChannel[] = [];
+
+                // we have to separately check not includes as we don't want anything in those to be there
+                for (let j = 0; j < allChannels.length; j++) {
+                    let notIncludes = true, result = false;
+                    for (let i = 0; i < filters.length; i++) {
+                        if (filters[i].filterType === 'not-includes' && allChannels[j].name.includes(filters[i].filterText)) {
+                            notIncludes = false;
+                        }
+
+                        if (filters[i].filterType === 'starts-with' && allChannels[j].name.startsWith(filters[i].filterText)) {
+                            result = true;
+                        }
+
+                        if (filters[i].filterType === 'includes' && allChannels[j].name.includes(filters[i].filterText)) {
+                            result = true;
+                        }
+                    }
+
+                    if ((notIncludes && result )|| filters.length === 0) {
+                        filteredChannels.push(allChannels[j]);
+                    }
+                }
+
+                const total = filteredChannels.length;
+                let page = body.page || 0;
+                const pageSize = body.pageSize || total;
+
+                if (page * pageSize > total) page = 0;
+
+                const slicefilteredChannels = filteredChannels.slice(page * pageSize, (page + 1) * pageSize);
+
+                // return the list of series as well as the total amount of series
+                logger.info(`POST /api/channel/search-filtered - successfully obtained ${slicefilteredChannels.length} filtered channels!`);
+                return new Response(JSON.stringify({ channels: slicefilteredChannels, total }), { status: 200, headers: defaultHeaders });
+            }
+
+            logger.warn('POST /api/channel/search-filtered - failed to get filtered channels!');
+            return new Response(JSON.stringify({ message: 'failed to get filtered channels!' }), { status: 400, headers: defaultHeaders });
+        }
+    },
+    {
+        method: ['GET', 'POST', 'DELETE'],
+        pattern: new URLPattern({ pathname: '/api/filter' }),
+        handler: async (request) => {
+            // must be a POST, try to get all movies currently loaded
+            if (parser.isParsing || parser.isCreating) {
+                logger.warn(`${request.method} /api/filter - failed to modify a filter (still parsing/creating files!)`);
+                return new Response(JSON.stringify({ message: 'currently parsing/creating files! please wait...' }), { status: 401, headers: defaultHeaders });
+            }
+
+            // get all filters
+            if (request.method === 'GET') {
+                const filters = getFilters();
+                return new Response(JSON.stringify({ filters, total: filters.length }), { status: 200, headers: defaultHeaders });
+            } else if (request.method === 'DELETE') {
+                // delete specific filters
+                if (request.headers.get('Content-Type') === 'application/json') {
+                    const body = (await request.json()) as DeleteFilterRequestBody;
+        
+                    if (body.id === undefined) {
+                        logger.warn('DELETE /api/filter - failed to delete the filter (missing the id)!');      
+                        return new Response(JSON.stringify({ message: 'missing the id!' }), { status: 401, headers: defaultHeaders });
+                    }
+                    
+                    removeFilter(body.id);
+
+                    // return a successful attempt after deleting
+                    logger.info(`DELETE /api/filter - successfully deleted filter!`);
+                    return new Response(JSON.stringify({ message: 'successfully deleted filter!' }), { status: 200, headers: defaultHeaders });
+                }
+            } else if (request.method === 'POST') {
+                // create a new filter
+                if (request.headers.get('Content-Type') === 'application/json') {
+                    const body = (await request.json()) as CreateFilterRequestBody;
+        
+                    if (body.filterText === undefined) {
+                        logger.warn('POST /api/filter - failed to insert the filter (missing the text)!');      
+                        return new Response(JSON.stringify({ message: 'missing the text!' }), { status: 401, headers: defaultHeaders });
+                    }
+
+                    if (body.filterType === undefined) {
+                        logger.warn('POST /api/filter - failed to insert the filter (missing the type)!');      
+                        return new Response(JSON.stringify({ message: 'missing the type!' }), { status: 401, headers: defaultHeaders });
+                    }
+                    
+                    insertFilter(body.filterText, body.filterType);
+
+                    // return a successful attempt after inserting
+                    logger.info(`POST /api/filter - successfully created filter!`);
+                    return new Response(JSON.stringify({ message: 'successfully created filter!' }), { status: 200, headers: defaultHeaders });
+                }
+            }
+
+            logger.warn(`${request.method} /api/filter - failed to modify a filter (still parsing/creating files!)`);
+            return new Response(JSON.stringify({ message: 'failed to modify a filter!' }), { status: 400, headers: defaultHeaders });
         }
     },
 ];

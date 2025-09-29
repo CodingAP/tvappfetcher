@@ -1,0 +1,2 @@
+SELECT * FROM CHANNELS
+LIMIT :pageSize OFFSET :offset;

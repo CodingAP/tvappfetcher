@@ -28,17 +28,29 @@ class ItemPaginator extends HTMLElement {
                     margin-bottom: 10px;
                 }
 
-                th,
-                td {
+                th {
                     border: 1px solid light-dark(var(--muted-light), var(--muted-dark));
                     padding: 6px 10px;
-                    text-align: center;
                     width: auto;
-                }
-
-                th {
                     background: var(--primary);
                     color: var(--bg-light);
+                }
+
+                td {
+                    border: 1px solid light-dark(var(--muted-light), var(--muted-dark));
+                    width: auto;
+                    padding: 6px 10px;
+                    text-align: center;
+                    vertical-align: middle;
+
+                    div {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        flex-direction: column;
+                        width: 100%;
+                        height: 100%;
+                    }
                 }
 
                 thead, tbody, tr {
@@ -47,7 +59,13 @@ class ItemPaginator extends HTMLElement {
                     table-layout: fixed;
                 }
 
-                .button {
+                select {
+                    padding: 10px;
+                    border-radius: 8px;
+                    border: 1px solid light-dark(var(--muted-light), var(--muted-dark));
+                }
+
+                button {
                     display: inline-block;
                     padding: 10px 14px;
                     border-radius: 10px;
@@ -80,7 +98,7 @@ class ItemPaginator extends HTMLElement {
                     text-align: center;
                 }
                 
-                .ell {
+                .misc-pages {
                     padding: 0 6px;
                 }
 
@@ -113,8 +131,8 @@ class ItemPaginator extends HTMLElement {
 
             <nav class="page-controls">
                 <div>
-                    <button class="button button-primary" id="previous-page">«</button>
-                    <button class="button button-primary" id="next-page">»</button>
+                    <button class="button-primary" id="previous-page">«</button>
+                    <button class="button-primary" id="next-page">»</button>
                 </div>  
 
                 <span id="pages"></span>
@@ -227,21 +245,21 @@ class ItemPaginator extends HTMLElement {
         const end = Math.min(start + this.#pageSize, this.total);
         this.#data.forEach(row => {
             const tableRow = document.createElement('tr');
+
             columns.forEach(col => {
                 const tableCell = document.createElement('td');
-                if (col.width) tableCell.style.width = col.width;
+                const div = document.createElement('div');
 
                 if (typeof col.render === 'function') {
-                    const content = col.render(row);
-
-                    if (content instanceof HTMLElement) tableCell.appendChild(content);
-                    else tableCell.textContent = content;
+                    col.render(row, div);
                 } else {
-                    tableCell.textContent = row[col.key];
+                    div.textContent = row[col.key];
                 }
 
+                tableCell.appendChild(div);
                 tableRow.appendChild(tableCell);
             });
+
             tableBody.appendChild(tableRow);
         });
 

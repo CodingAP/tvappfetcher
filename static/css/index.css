@@ -146,14 +146,18 @@ label {
 
 input[type=text],
 input[type=password],
-input[type=url],
-textarea,
-select {
+input[type=url] {
     width: 100%;
     padding: 10px;
     border-radius: 8px;
     border: 1px solid light-dark(var(--muted-light), var(--muted-dark));
     background: transparent;
+}
+
+select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid light-dark(var(--muted-light), var(--muted-dark));
 }
 
 .button {

@@ -74,6 +74,31 @@ interface FetchItemRequestBody {
 };
 
 /**
+ * the body for a create filter request
+ */
+interface CreateFilterRequestBody {
+    /**
+     * filtered text 
+     */
+    filterText: string;
+    
+    /**
+     * type of the filter
+     */
+    filterType: string;
+};
+
+/**
+ * the body for a delete filter request
+ */
+interface DeleteFilterRequestBody {
+    /**
+     * id of the filter
+     */
+    id: number;
+};
+
+/**
  * settings for the application
  */
 interface M3USettings {
@@ -151,7 +176,27 @@ interface M3UItem {
 /**
  * data needed to parse a m3u channel specifically
  */
-interface M3UChannel extends M3UItem {}
+interface M3UChannel extends M3UItem {};
+
+/**
+ * filter object for channel items
+ */
+interface ChannelFilter {
+    /**
+     * id of the filter
+     */
+    filterId: number;
+
+    /**
+     * text to filter
+     */
+    filterText: string;
+
+    /**
+     * type of filter (starts-with, includes, not-includes)
+     */
+    filterType: string;
+}
 
 /**
  * data needed to parse a m3u movie specifically
@@ -223,6 +268,7 @@ export type {
     SettingsUpdateBody,
     PaginatorSearchRequestBody,
     FetchItemRequestBody,
+    CreateFilterRequestBody, DeleteFilterRequestBody, ChannelFilter, 
     M3USettings, M3UItem, M3UChannel, M3UMovie, M3USeries, M3UParsingMessageEventData,
     JSONToken
 };

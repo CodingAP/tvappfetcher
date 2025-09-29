@@ -47,41 +47,47 @@
                 <div class="grid">
                     <nav class="card">
                         <ul>
-                            <li><button data-tab="channels">channels</button></li>
-                            <li><button data-tab="movies">movies</button></li>
-                            <li><button data-tab="series">tv series</button></li>
-                            <li><button data-tab="status">status</button></li>
-                            <li><button data-tab="settings" class="active">settings</button></li>
+                            <li><button class="navtab" id="navtab-channels">channels</button></li>
+                            <li><button class="navtab" id="navtab-movies">movies</button></li>
+                            <li><button class="navtab" id="navtab-series">tv series</button></li>
+                            <li><button class="navtab" id="navtab-status">status</button></li>
+                            <li><button class="navtab" id="navtab-settings">settings</button></li>
                         </ul>
                     </nav>
 
                     <div>
+                        <div class="card tab-panel">
+                            <h3>welcome!</h3>
+                            <h4>select a tab to get started!</h4>
+                        </div>
+
                         <div id="tab-channels" class="card tab-panel" style="display:none">
                             <h3>channels</h3>
+                            <h4>filters</h4>
                             <div class="row">
-                                <div style="flex:1">
-                                    <div class="muted small">available channels</div>
-                                    <div class="list-scroll card" id="available-channels-list" style="margin-top:8px"></div>
-                                </div>
+                                <input id="filter-text" type="text" placeholder="text filter..." />
+                                <select id="filter-type">
+                                    <option value="starts-with">starts with</option>
+                                    <option value="includes">includes</option>
+                                    <option value="not-includes">doesn't include</option>
+                                </select>
+                                <button id="add-filter" class="button button-primary">add</button>
                             </div>
                             <div class="space"></div>
-                            <div class="row">
-                                <div style="flex:1">
-                                    <div class="muted small">filtered channels</div>
-                                    <div class="list-scroll card" id="filtered-channels-list" style="margin-top:8px"></div>
-                                </div>
-                                <div style="width:12px"></div>
-                                <div style="width:320px">
-                                    <div class="muted small">filters</div>
-                                    <div class="space"></div>
-                                    <div id="filtersArea" class="card" style="padding:10px"></div>
-                                    <div class="space"></div>
-                                    <div class="row">
-                                        <input id="newFilter" placeholder="e.g. US, UK, Peacock" />
-                                        <button id="addFilter" class="btn btn-primary">+</button>
-                                    </div>
-                                </div>
-                            </div>
+                            <item-paginator id="channel-filters"></item-paginator>
+                            <div id="filter-message" class="small"></div>
+
+                            <div class="space"></div>
+                            <h4>all channels</h4>
+                            <item-paginator id="all-channels"></item-paginator>
+                            <div class="space"></div>
+                            <div id="all-channels-message" class="small"></div>
+
+                            <div class="space"></div>
+                            <h4>filtered channels</h4>
+                            <item-paginator id="filtered-channels"></item-paginator>
+                            <div class="space"></div>
+                            <div id="filtered-channels-message" class="small"></div>
                         </div>
 
                         <div id="tab-movies" class="card tab-panel" style="display:none">
@@ -133,7 +139,7 @@
                             <button id="refresh-status" class="button button-primary">refresh status</button>
                         </div>
 
-                        <div id="tab-settings" class="card tab-panel">
+                        <div id="tab-settings" class="card tab-panel" style="display:none">
                             <h3>settings</h3>
                             <div class="space"></div>
                             <label for="m3u-url">paste a m3u or m3u8 url</label>

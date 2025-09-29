@@ -11,7 +11,7 @@
 
 import { Database } from '@db/sqlite';
 import { existsSync } from '@std/fs';
-import { M3UChannel, M3UMovie, M3USeries, M3USettings } from '../types.ts';
+import { ChannelFilter, M3UChannel, M3UMovie, M3USeries, M3USettings } from '../types.ts';
 
 /**
  * global database reference (essentially a singleton)
@@ -133,18 +133,23 @@ const upsertChannel = (channel: M3UChannel) => {
  * 
  * @param id channel id
  */
-const getChannel = (id: string): M3UChannel => {
-    const response = selectSqlFile('./src/database/sql/channel/get-channel.sql').get<{ CHANNEL_ID: string, XUI_ID: string, TVG_ID: string, TVG_NAME: string, TVG_LOGO: string, GROUP_TITLE: string, NAME: string, URL: string }>({ id })!;
-    return {
-        id: response.CHANNEL_ID,
-        xuiId: response.XUI_ID,
-        tvgId: response.TVG_ID,
-        tvgName: response.TVG_NAME,
-        tvgLogo: response.TVG_LOGO,
-        groupTitle: response.GROUP_TITLE,
-        name: response.NAME,
-        url: response.URL
-    };
+const getChannels = (page: number, pageSize: number): M3UChannel[] => {
+    const response = selectSqlFile('./src/database/sql/channel/get-channels.sql').all<{ CHANNEL_ID: string, XUI_ID: string, TVG_ID: string, TVG_NAME: string, TVG_LOGO: string, GROUP_TITLE: string, NAME: string, URL: string }>({ pageSize, offset: page * pageSize });
+    const result: M3UChannel[] = [];
+    for (const channel of response) {
+        result.push({
+            id: channel.CHANNEL_ID,
+            xuiId: channel.XUI_ID,
+            tvgId: channel.TVG_ID,
+            tvgName: channel.TVG_NAME,
+            tvgLogo: channel.TVG_LOGO,
+            groupTitle: channel.GROUP_TITLE,
+            name: channel.NAME,
+            url: channel.URL
+        });
+    }
+
+    return result;
 };
 
 /**
@@ -155,6 +160,44 @@ const getChannel = (id: string): M3UChannel => {
 const countChannels = (): number => {
     const response = selectSqlFile('./src/database/sql/channel/count-channels.sql').get<{ TOTAL: number }>()!;
     return response?.TOTAL;
+};
+
+/**
+ * gets all the filters from the database 
+ * 
+ * @returns all filters in database
+ */
+const getFilters = () => {
+    const response = selectSqlFile('./src/database/sql/filters/get-filters.sql').all<{ FILTER_ID: number, FILTER_TEXT: string, FILTER_TYPE: string }>();
+    const result: ChannelFilter[] = [];
+    for (const filter of response) {
+        result.push({
+            filterId: filter.FILTER_ID,
+            filterText: filter.FILTER_TEXT,
+            filterType: filter.FILTER_TYPE,
+        });
+    }
+
+    return result;
+};
+
+/**
+ * inserts a new filter into the database 
+ * 
+ * @param text filtered text
+ * @param type type of filtering
+ */
+const insertFilter = (text: string, type: string) => {
+    executeSqlFile('./src/database/sql/filters/insert-filter.sql', { filterText: text, filterType: type });
+};
+
+/**
+ * removes a filter from the database 
+ * 
+ * @param id id of the filter
+ */
+const removeFilter = (id: number) => {
+    executeSqlFile('./src/database/sql/filters/remove-filter.sql', { filterId: id });
 };
 
 /**
@@ -337,7 +380,8 @@ const updateSeriesFetched = (groupTitle: string, fetched: boolean) => {
 
 export {
     updateSettings, getSettings,
-    getChannel, upsertChannel, countChannels,
+    getChannels, upsertChannel, countChannels,
+    getFilters, insertFilter, removeFilter,
     getMovies, upsertMovie, countMovies, updateMovieFetched,
     getSeries, getFetchedEpisodes, upsertSeries, countSeries, updateSeriesFetched
 };
