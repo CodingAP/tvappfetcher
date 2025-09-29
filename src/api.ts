@@ -4,7 +4,7 @@ import { setCookie } from '@std/http/cookie';
 import { type Route } from '@std/http/unstable-route';
 import { getLogger } from './logger.ts';
 import { getParser } from './m3u-parser.ts';
-import { encrypt } from './middleware.ts';
+import { authenticated, encrypt } from './middleware.ts';
 import { CreateFilterRequestBody, DeleteFilterRequestBody, FetchItemRequestBody, LoginRequestBody, M3UChannel, PaginatorSearchRequestBody, SettingsUpdateBody } from './types.ts';
 import { countChannels, countMovies, countSeries, getChannels, getFilters, getMovies, getSeries, getSettings, insertFilter, removeFilter, updateMovieFetched, updateSeriesFetched, updateSettings } from "./database/database.ts";
 
@@ -25,6 +25,7 @@ const routes: Route[] = [
                 // encrypted session token and send to client
                 const passwordBuffer = new TextEncoder().encode(body.password + Deno.env.get('SALT'));
                 const hashBuffer = await crypto.subtle.digest('SHA-256', passwordBuffer);
+                console.log(encodeHex(hashBuffer));
                 if (Deno.env.get('HASH') === encodeHex(hashBuffer)) {
                     const cookie = await encrypt(JSON.stringify({ timestamp: new Date().toISOString(), id: 'codingap' }));
                     const headers = new Headers();
@@ -47,6 +48,11 @@ const routes: Route[] = [
         method: ['GET', 'POST'],
         pattern: new URLPattern({ pathname: '/api/settings' }),
         handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             // get the url in the parser
             if (request.method === 'GET') {
                 return new Response(JSON.stringify(getSettings()), { status: 200, headers: defaultHeaders });
@@ -95,7 +101,12 @@ const routes: Route[] = [
     {
         method: ['GET'],
         pattern: new URLPattern({ pathname: '/api/fetch' }),
-        handler: () => {
+        handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             logger.info('GET /api/fetch - starting parsing m3u file!');
             parser.parseM3UFile();
             return new Response(JSON.stringify({ message: 'successfully started parsing!' }), { status: 202, headers: defaultHeaders });
@@ -104,7 +115,12 @@ const routes: Route[] = [
     {
         method: ['GET'],
         pattern: new URLPattern({ pathname: '/api/create' }),
-        handler: () => {
+        handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             logger.info('GET /api/fetch - starting creating files!');
             parser.createFiles();
             return new Response(JSON.stringify({ message: 'successfully started creating!' }), { status: 202, headers: defaultHeaders });
@@ -113,14 +129,24 @@ const routes: Route[] = [
     {
         method: ['GET'],
         pattern: new URLPattern({ pathname: '/api/next-fetch' }),
-        handler: () => {
+        handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             return new Response(JSON.stringify({ time: parser.nextFetch.toLocaleString() }), { status: 200, headers: defaultHeaders });
         }
     },
     {
         method: ['GET'],
         pattern: new URLPattern({ pathname: '/api/status' }),
-        handler: () => {
+        handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             logger.info(`GET /api/status - ${parser.status}`);
             return new Response(JSON.stringify({ status: parser.status }), { status: 200, headers: defaultHeaders });
         }
@@ -129,6 +155,11 @@ const routes: Route[] = [
         method: ['POST'],
         pattern: new URLPattern({ pathname: '/api/movie/search' }),
         handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             // must be a POST, try to get all movies currently loaded
             if (parser.isParsing || parser.isCreating) {
                 logger.warn('POST /api/movie/search - failed to get movies (still parsing/creating files!)');
@@ -160,6 +191,11 @@ const routes: Route[] = [
         method: ['PUT'],
         pattern: new URLPattern({ pathname: '/api/movie/fetch' }),
         handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             // must be a POST, try to get all movies currently loaded
             if (parser.isParsing || parser.isCreating) {
                 logger.warn('POST /api/movie/fetch - failed to get movies (still parsing/creating files!)');
@@ -194,6 +230,11 @@ const routes: Route[] = [
         method: ['POST'],
         pattern: new URLPattern({ pathname: '/api/series/search' }),
         handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             // must be a POST, try to get all series currently loaded
             if (parser.isParsing || parser.isCreating) {
                 logger.warn('POST /api/movie/search - failed to get series (still parsing/creating files!)');
@@ -225,6 +266,11 @@ const routes: Route[] = [
         method: ['PUT'],
         pattern: new URLPattern({ pathname: '/api/series/fetch' }),
         handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             // must be a POST, try to get all movies currently loaded
             if (parser.isParsing || parser.isCreating) {
                 logger.warn('POST /api/series/fetch - failed to get series (still parsing/creating files!)');
@@ -259,6 +305,11 @@ const routes: Route[] = [
         method: ['POST'],
         pattern: new URLPattern({ pathname: '/api/channel/search' }),
         handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             // try to get all channels currently loaded
             if (parser.isParsing || parser.isCreating) {
                 logger.warn(`POST /api/channel/search - failed to get channels (still parsing/creating files!)`);
@@ -289,6 +340,11 @@ const routes: Route[] = [
         method: ['POST'],
         pattern: new URLPattern({ pathname: '/api/channel/search-filtered' }),
         handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+
             // try to get all channels currently loaded
             if (parser.isParsing || parser.isCreating) {
                 logger.warn(`POST /api/channel/search-filtered - failed to get filtered channels (still parsing/creating files!)`);
@@ -345,6 +401,11 @@ const routes: Route[] = [
         method: ['GET', 'POST', 'DELETE'],
         pattern: new URLPattern({ pathname: '/api/filter' }),
         handler: async (request) => {
+            // only allow authenticated requests
+            if (!(await authenticated(request))) {
+                return new Response(JSON.stringify({ message: 'unauthenticated/forbidden!' }), { status: 403, headers: defaultHeaders });
+            }
+            
             // must be a POST, try to get all movies currently loaded
             if (parser.isParsing || parser.isCreating) {
                 logger.warn(`${request.method} /api/filter - failed to modify a filter (still parsing/creating files!)`);
