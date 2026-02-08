@@ -97,7 +97,13 @@ const getID = (displayName: string, type: string): string => {
     // remove anything past a colon except for some channels that need it for formatting
     const antiColon = ['SPFL', '24/7', 'XXX'];
     if (!antiColon.some(channel => displayName.startsWith(channel)) && type === 'channel') {
-        result = result.split(/[:]/g)[0];
+        result = result.split(/[:]/g)[0].trim();
+    }
+
+    // remove stuff after a line for some channels
+    const antiLine = ['ESPN+', 'FLSP', 'Flo', 'SN+', 'US (ESPN']
+    if (antiLine.some(channel => displayName.includes(channel)) && type === 'channel') {
+        result = result.split(/[|]/g)[0].trim();
     }
 
     result = result.replace(/[|()\[\]:,.]/g, ''); // remove unwanted characters
